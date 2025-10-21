@@ -13,19 +13,8 @@ import jakarta.servlet.http.HttpServletRequest;
 public class GlobalExceptionHandler {
     private final static Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(NoMessageException.class)
-    public ResponseEntity<ErrorResponse> handleNoMessageException(NoMessageException exception, HttpServletRequest request){
-        logger.error("Messege not found: {}", exception.getMessage());
-
-        ErrorResponse error = new ErrorResponse();
-        error.setMessage("Messege not found");
-        error.setStatus(HttpStatus.BAD_REQUEST.value());
-
-        return new ResponseEntity<ErrorResponse>(error, HttpStatus.BAD_REQUEST);
-    }
-
     @ExceptionHandler(ConversationIdNotFound.class)
-    public ResponseEntity<ErrorResponse> handleConversationIdNotFound(NoMessageException exception, HttpServletRequest request){
+    public ResponseEntity<ErrorResponse> handleConversationIdNotFound(ConversationIdNotFound exception, HttpServletRequest request){
         logger.error("Conversation not found: {}", exception.getMessage());
 
         ErrorResponse error = new ErrorResponse();

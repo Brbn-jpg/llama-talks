@@ -13,7 +13,6 @@ import com.chatbot.v1.Models.MessageRole;
 import com.chatbot.v1.Repository.ConverstaionRepository;
 import com.chatbot.v1.Repository.MessageRepository;
 import com.chatbot.v1.exception.ConversationIdNotFound;
-import com.chatbot.v1.exception.NoMessageException;
 import com.chatbot.v1.records.ChatRequest;
 import com.chatbot.v1.records.ChatResponse;
 
@@ -54,8 +53,8 @@ public class ChatServiceImpl implements ChatService{
 
     @Override
     public ChatResponse chat(ChatRequest message){
-        if(message.message().isEmpty()){
-            throw new NoMessageException("Message not found");
+        if(message == null || message.message() == null || message.message().isEmpty()){
+            throw new IllegalArgumentException("Message cannot be empty");
         }
 
         String conversationId = prepareConversation(message);
@@ -63,6 +62,7 @@ public class ChatServiceImpl implements ChatService{
 
         UserMessage userMessage = UserMessage.from(message.message());
         memory.add(userMessage);
+        
         saveUserMessage(conversationId, message.message());
 
 
@@ -74,60 +74,19 @@ public class ChatServiceImpl implements ChatService{
     }
 
     @Override
-    public List<Conversation> getAllMessages(){
-        List<Conversation> responses = this.conversationRepository.findAll();
-
-        return responses;
-    }
-
-    @Override
-    public Conversation getConversationById(String conversationId){
-        if(conversationId.isBlank() || conversationId == null){
-            throw new ConversationIdNotFound("Conversation not found");
-        }
-
-        Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
-        return conversation;
-    }
-
-    @Transactional
-    @Override
-    public void deleteConverstaion(String conversationId){
-        if(conversationId.isBlank() || conversationId == null){
-            throw new ConversationIdNotFound("Conversation not found");
-        }
-
-        Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
-        if(conversation != null){
-            this.conversationRepository.delete(conversation);
-        }
-    }
-
-    @Transactional
-    @Override
-    public void changeTitle(String title, String conversationId){
-        if(conversationId.isBlank() || conversationId == null){
-            throw new ConversationIdNotFound("Conversation not found");
-        }
-
-        Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
-        if(conversation != null){
-            conversation.setTitle(title);
-            this.conversationRepository.save(conversation);
-        }
-    }
-
-    @Override
     public Flux<String> streamChat(ChatRequest message){
-        if(message.message().isEmpty()){
-            throw new NoMessageException("Message not found");
+        if(message == null || message.message() == null || message.message().isEmpty()){
+            throw new IllegalArgumentException("Message cannot be empty");
         }
 
         final String conversationId = prepareConversation(message);
-
-        saveUserMessage(conversationId, message.message());
-
+        
         ChatMemory memory = prepareChatMemory(conversationId);
+
+        UserMessage userMessage = UserMessage.from(message.message());
+        memory.add(userMessage);
+        
+        saveUserMessage(conversationId, message.message());
 
         StringBuilder aiResponse = new StringBuilder();
 
@@ -157,6 +116,49 @@ public class ChatServiceImpl implements ChatService{
         return flux;
     }
 
+    @Override
+    public List<Conversation> getAllMessages(){
+        List<Conversation> responses = this.conversationRepository.findAll();
+
+        return responses;
+    }
+
+    @Override
+    public Conversation getConversationById(String conversationId){
+        Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
+        if(conversation == null){
+            throw new ConversationIdNotFound("Conversation not found");
+        }
+
+        return conversation;
+    }
+
+    @Transactional
+    @Override
+    public void deleteConverstaion(String conversationId){
+        Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
+        if(conversation == null){
+            throw new ConversationIdNotFound("Conversation not found");
+        }
+        this.conversationRepository.delete(conversation);
+    }
+
+    @Transactional
+    @Override
+    public void changeTitle(String title, String conversationId){
+        Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
+        if(conversation == null){
+            throw new ConversationIdNotFound("Conversation not found");
+        } 
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("Title cannot be empty");
+        }
+        if (title.length() > 63) { 
+            throw new IllegalArgumentException("Title too long");
+        }
+
+        conversation.setTitle(title);
+    }
 
     ////////////////////////////////////
     //         Helper methods         //
@@ -183,7 +185,14 @@ public class ChatServiceImpl implements ChatService{
 
     @Transactional
     public void saveUserMessage(String conversationId, String message){
+        if(message == null || message.isBlank()){
+            throw new IllegalArgumentException("Message cannot be empty");
+        }
+
         Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
+        if(conversation == null){
+            throw new ConversationIdNotFound("Conversation not found");
+        } 
 
         Message userMsg = new Message();
         userMsg.setConversation(conversation);
@@ -195,7 +204,15 @@ public class ChatServiceImpl implements ChatService{
 
     @Transactional
     public void saveAiMessage(String conversationId, String content) {
+        if(content == null || content.isBlank()){
+            throw new IllegalArgumentException("AI response cannot be empty");
+        }
+
         Conversation conversation = conversationRepository.findByConversationId(conversationId);
+        if(conversation == null){
+            throw new ConversationIdNotFound("Conversation not found");
+        } 
+
         Message aiMsg = new Message();
         aiMsg.setConversation(conversation);
         aiMsg.setContent(content);
