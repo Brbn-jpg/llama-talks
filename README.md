@@ -1,6 +1,6 @@
-# OllamaChat
+# LlamaTalks
 
-OllamaChat is a Spring Boot-based chatbot application leveraging LangChain4j and Ollama for advanced conversational AI. It supports streaming responses, conversation management, and persistent chat history.
+LlamaTalks is a Spring Boot-based chatbot application leveraging LangChain4j and Ollama for advanced conversational AI. It supports streaming responses, conversation management, and persistent chat history.
 
 ## Features
 
