@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: v1
+  datasource:
+    url: ${DB_URL}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+      database-platform: org.hibernate.dialect.PostgreSQLDialect
+server:
+  servlet:
+    context-path: /api

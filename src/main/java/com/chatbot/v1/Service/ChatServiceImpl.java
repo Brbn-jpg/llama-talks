@@ -1,0 +1,221 @@
+package com.chatbot.v1.Service;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+
+import com.chatbot.v1.Models.Conversation;
+import com.chatbot.v1.Models.Message;
+import com.chatbot.v1.Models.MessageRole;
+import com.chatbot.v1.Repository.ConverstaionRepository;
+import com.chatbot.v1.Repository.MessageRepository;
+import com.chatbot.v1.exception.ConversationIdNotFound;
+import com.chatbot.v1.exception.NoMessageException;
+import com.chatbot.v1.records.ChatRequest;
+import com.chatbot.v1.records.ChatResponse;
+
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.memory.ChatMemory;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
+import dev.langchain4j.model.ollama.OllamaChatModel;
+import dev.langchain4j.model.ollama.OllamaStreamingChatModel;
+import jakarta.transaction.Transactional;
+import reactor.core.publisher.Flux;
+
+@Service
+public class ChatServiceImpl implements ChatService{
+    private final OllamaChatModel ollama;
+    private final StreamingChatModel ollamaStream;
+    private final ConverstaionRepository conversationRepository;
+    private final MessageRepository messageRepository;
+
+    public ChatServiceImpl(ConverstaionRepository converstaionRepository, MessageRepository messageRepository){
+        this.ollama = OllamaChatModel.builder()
+                                            .modelName("qwen2.5:0.5b")
+                                            .baseUrl("http://ollama:11434")
+                                            .timeout(Duration.ofMinutes(3))
+                                            .build();
+
+        this.ollamaStream = OllamaStreamingChatModel.builder()
+                                                .modelName("qwen2.5:0.5b")
+                                                .baseUrl("http://ollama:11434")
+                                                .timeout(Duration.ofMinutes(3))
+                                                .build();
+
+        this.conversationRepository = converstaionRepository;
+        this.messageRepository = messageRepository;
+    }
+
+    @Override
+    public ChatResponse chat(ChatRequest message){
+        if(message.message().isEmpty()){
+            throw new NoMessageException("Message not found");
+        }
+
+        String conversationId = prepareConversation(message);
+        ChatMemory memory = prepareChatMemory(conversationId);
+
+        UserMessage userMessage = UserMessage.from(message.message());
+        memory.add(userMessage);
+        saveUserMessage(conversationId, message.message());
+
+
+        AiMessage response = this.ollama.chat(memory.messages()).aiMessage();
+        memory.add(response);
+        saveAiMessage(conversationId, response.text());
+        
+        return new ChatResponse(response.text(), conversationId);
+    }
+
+    @Override
+    public List<Conversation> getAllMessages(){
+        List<Conversation> responses = this.conversationRepository.findAll();
+
+        return responses;
+    }
+
+    @Override
+    public Conversation getConversationById(String conversationId){
+        if(conversationId.isBlank() || conversationId == null){
+            throw new ConversationIdNotFound("Conversation not found");
+        }
+
+        Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
+        return conversation;
+    }
+
+    @Transactional
+    @Override
+    public void deleteConverstaion(String conversationId){
+        if(conversationId.isBlank() || conversationId == null){
+            throw new ConversationIdNotFound("Conversation not found");
+        }
+
+        Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
+        if(conversation != null){
+            this.conversationRepository.delete(conversation);
+        }
+    }
+
+    @Transactional
+    @Override
+    public void changeTitle(String title, String conversationId){
+        if(conversationId.isBlank() || conversationId == null){
+            throw new ConversationIdNotFound("Conversation not found");
+        }
+
+        Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
+        if(conversation != null){
+            conversation.setTitle(title);
+            this.conversationRepository.save(conversation);
+        }
+    }
+
+    @Override
+    public Flux<String> streamChat(ChatRequest message){
+        if(message.message().isEmpty()){
+            throw new NoMessageException("Message not found");
+        }
+
+        final String conversationId = prepareConversation(message);
+
+        saveUserMessage(conversationId, message.message());
+
+        ChatMemory memory = prepareChatMemory(conversationId);
+
+        StringBuilder aiResponse = new StringBuilder();
+
+        Flux<String> flux = Flux.create(emitter -> {
+            this.ollamaStream.chat(memory.messages(), new StreamingChatResponseHandler() {
+                
+                @Override
+                public void onPartialResponse(String partialResponse) {
+                    emitter.next(partialResponse);
+                    aiResponse.append(partialResponse);
+                }
+
+                @Override
+                public void onError(Throwable error) {
+                    emitter.error(error);
+                }
+
+                @Override
+                public void onCompleteResponse(dev.langchain4j.model.chat.response.ChatResponse completeResponse) {
+                    saveAiMessage(conversationId, aiResponse.toString());
+                    emitter.complete();
+                }
+                
+            });
+        });
+
+        return flux;
+    }
+
+
+    ////////////////////////////////////
+    //         Helper methods         //
+    ////////////////////////////////////
+
+    @Transactional
+    public String prepareConversation(ChatRequest message){
+        String conversationId = message.conversationId();
+        if(conversationId == null || conversationId.isBlank()){
+            conversationId = UUID.randomUUID().toString();
+        }
+
+        Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
+        if(conversation == null){
+            conversation = new Conversation();
+            conversation.setConversationId(conversationId);
+            conversation.setStartedAt(LocalDateTime.now());
+            conversation.setTitle(message.message().length() > 64 ? message.message().substring(0, 63) : message.message());
+            conversation = this.conversationRepository.save(conversation);
+        }
+
+        return conversationId;
+    }
+
+    @Transactional
+    public void saveUserMessage(String conversationId, String message){
+        Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
+
+        Message userMsg = new Message();
+        userMsg.setConversation(conversation);
+        userMsg.setContent(message);
+        userMsg.setRole(MessageRole.USER);
+        userMsg.setGeneratedAt(LocalDateTime.now());
+        this.messageRepository.save(userMsg);
+    }
+
+    @Transactional
+    public void saveAiMessage(String conversationId, String content) {
+        Conversation conversation = conversationRepository.findByConversationId(conversationId);
+        Message aiMsg = new Message();
+        aiMsg.setConversation(conversation);
+        aiMsg.setContent(content);
+        aiMsg.setRole(MessageRole.AI);
+        aiMsg.setGeneratedAt(LocalDateTime.now());
+        messageRepository.save(aiMsg);
+    }
+
+    private ChatMemory prepareChatMemory(String conversationId){
+        ChatMemory memory = MessageWindowChatMemory.withMaxMessages(20);
+        
+        List<Message> dbMessages = this.messageRepository.findByConversation_ConversationId(conversationId);
+        for(Message m: dbMessages){
+            if(m.getRole().equals(MessageRole.USER)){
+                memory.add(UserMessage.from(m.getContent()));
+            } else {
+                memory.add(AiMessage.from(m.getContent()));
+            }
+        }
+
+        return memory;
+    }
+}
