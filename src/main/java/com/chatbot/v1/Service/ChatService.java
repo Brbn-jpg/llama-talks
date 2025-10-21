@@ -10,7 +10,7 @@ import reactor.core.publisher.Flux;
 
 public interface ChatService {
     ChatResponse chat(ChatRequest message);
-    Flux<String> streamChat(ChatRequest message);
+    Flux<ChatResponse> streamChat(ChatRequest message);
     List<Conversation> getAllMessages();
     Conversation getConversationById(String conversationId);
     void deleteConverstaion(String conversationId);

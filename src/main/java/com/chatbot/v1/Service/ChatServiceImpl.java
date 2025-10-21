@@ -62,7 +62,7 @@ public class ChatServiceImpl implements ChatService{
 
         UserMessage userMessage = UserMessage.from(message.message());
         memory.add(userMessage);
-        
+
         saveUserMessage(conversationId, message.message());
 
 
@@ -74,7 +74,7 @@ public class ChatServiceImpl implements ChatService{
     }
 
     @Override
-    public Flux<String> streamChat(ChatRequest message){
+    public Flux<ChatResponse> streamChat(ChatRequest message){
         if(message == null || message.message() == null || message.message().isEmpty()){
             throw new IllegalArgumentException("Message cannot be empty");
         }
@@ -90,12 +90,12 @@ public class ChatServiceImpl implements ChatService{
 
         StringBuilder aiResponse = new StringBuilder();
 
-        Flux<String> flux = Flux.create(emitter -> {
+        Flux<ChatResponse> flux = Flux.create(emitter -> {
             this.ollamaStream.chat(memory.messages(), new StreamingChatResponseHandler() {
                 
                 @Override
                 public void onPartialResponse(String partialResponse) {
-                    emitter.next(partialResponse);
+                    emitter.next(new ChatResponse(partialResponse, conversationId));
                     aiResponse.append(partialResponse);
                 }
 
@@ -167,8 +167,15 @@ public class ChatServiceImpl implements ChatService{
     @Transactional
     public String prepareConversation(ChatRequest message){
         String conversationId = message.conversationId();
+        
         if(conversationId == null || conversationId.isBlank()){
             conversationId = UUID.randomUUID().toString();
+        } else {
+            Conversation existing = this.conversationRepository.findByConversationId(conversationId);
+            if (existing == null) {
+                throw new ConversationIdNotFound("Conversation not found: " + conversationId);
+            }
+            return conversationId;
         }
 
         Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
