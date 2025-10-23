@@ -1,23 +1,25 @@
 services:
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        ollama serve &
-        sleep 10
-        ollama pull qwen2.5:0.5b
-        wait
-    networks:
-      - chat_network
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   entrypoint: ["/bin/sh", "-c"]
+  #   command:
+  #     - |
+  #       ollama serve &
+  #       sleep 10
+  #       ollama pull qwen2.5:0.5b
+  #       sleep 5
+  #       ollama pull nomic-embed-text
+  #       wait
+  #   networks:
+  #     - chat_network
 
   database:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -43,7 +45,7 @@ services:
     env_file:
       - .env
     depends_on:
-      - ollama
+      # - ollama
       - database
     networks:
       - chat_network

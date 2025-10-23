@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,7 @@ import com.chatbot.v1.records.ChatRequest;
 import com.chatbot.v1.records.ChatResponse;
 
 import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
@@ -24,6 +26,9 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.ollama.OllamaStreamingChatModel;
+import dev.langchain4j.rag.content.Content;
+import dev.langchain4j.rag.content.retriever.ContentRetriever;
+import dev.langchain4j.rag.query.Query;
 import jakarta.transaction.Transactional;
 import reactor.core.publisher.Flux;
 
@@ -33,22 +38,26 @@ public class ChatServiceImpl implements ChatService{
     private final StreamingChatModel ollamaStream;
     private final ConverstaionRepository conversationRepository;
     private final MessageRepository messageRepository;
+    private final ContentRetriever contentRetriever;
 
-    public ChatServiceImpl(ConverstaionRepository converstaionRepository, MessageRepository messageRepository){
+    public ChatServiceImpl(ConverstaionRepository converstaionRepository, 
+                            MessageRepository messageRepository, 
+                            ContentRetriever contentRetriever){
         this.ollama = OllamaChatModel.builder()
-                                            .modelName("qwen2.5:0.5b")
-                                            .baseUrl("http://ollama:11434")
-                                            .timeout(Duration.ofMinutes(3))
-                                            .build();
+                            .modelName("qwen2.5:0.5b") // Small model running on CPU
+                            .baseUrl("http://host.docker.internal:11434")
+                            .timeout(Duration.ofMinutes(3))
+                            .build();
 
         this.ollamaStream = OllamaStreamingChatModel.builder()
-                                                .modelName("qwen2.5:0.5b")
-                                                .baseUrl("http://ollama:11434")
-                                                .timeout(Duration.ofMinutes(3))
-                                                .build();
+                            .modelName("qwen2.5:0.5b")
+                            .baseUrl("http://host.docker.internal:11434")
+                            .timeout(Duration.ofMinutes(3))
+                            .build();
 
         this.conversationRepository = converstaionRepository;
         this.messageRepository = messageRepository;
+        this.contentRetriever = contentRetriever;
     }
 
     @Override
@@ -59,6 +68,19 @@ public class ChatServiceImpl implements ChatService{
 
         String conversationId = prepareConversation(message);
         ChatMemory memory = prepareChatMemory(conversationId);
+
+        // Docs retrieval
+        List<Content> relevantContents = contentRetriever.retrieve(Query.from(message.message()));
+        String context = relevantContents.stream()
+                                        .map(content -> content.textSegment().text())
+                                        .collect(Collectors.joining("\n\n"));
+
+        if (!context.isEmpty()) {
+            SystemMessage systemMessage = SystemMessage.from(
+                "Use the following context to answer the user's question:\n\n" + context
+            );
+            memory.add(systemMessage);
+        }
 
         UserMessage userMessage = UserMessage.from(message.message());
         memory.add(userMessage);
@@ -82,6 +104,19 @@ public class ChatServiceImpl implements ChatService{
         final String conversationId = prepareConversation(message);
         
         ChatMemory memory = prepareChatMemory(conversationId);
+
+        // Docs retrieval
+        List<Content> relevantContents = contentRetriever.retrieve(Query.from(message.message()));
+        String context = relevantContents.stream()
+                                        .map(content -> content.textSegment().text())
+                                        .collect(Collectors.joining("\n\n"));
+
+        if (!context.isEmpty()) {
+            SystemMessage systemMessage = SystemMessage.from(
+                "Use the following context to answer the user's question:\n\n" + context
+            );
+            memory.add(systemMessage);
+        }
 
         UserMessage userMessage = UserMessage.from(message.message());
         memory.add(userMessage);
