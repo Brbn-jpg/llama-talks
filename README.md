@@ -253,7 +253,8 @@ curl -X POST http://localhost:8080/api/chat \
 ### Document Ingestion (cURL)
 
 ```bash
-curl -X POST http://localhost:8080/api/ingestion?filePath=files/ \
+curl -X POST "http://localhost:8080/api/ingestion?filePath=files/" \
+  -H "Content-Type: application/json"
 ```
 
 ### Stream Chat with RAG Context
