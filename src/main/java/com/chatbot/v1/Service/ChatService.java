@@ -3,8 +3,8 @@ package com.chatbot.v1.Service;
 import java.util.List;
 
 import com.chatbot.v1.Models.Conversation;
-import com.chatbot.v1.records.ChatRequest;
-import com.chatbot.v1.records.ChatResponse;
+import com.chatbot.v1.Records.ChatRequest;
+import com.chatbot.v1.Records.ChatResponse;
 
 import reactor.core.publisher.Flux;
 

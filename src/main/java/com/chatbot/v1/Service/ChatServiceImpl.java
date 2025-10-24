@@ -1,6 +1,5 @@
 package com.chatbot.v1.Service;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -8,14 +7,14 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.chatbot.v1.Exception.ConversationIdNotFound;
 import com.chatbot.v1.Models.Conversation;
 import com.chatbot.v1.Models.Message;
 import com.chatbot.v1.Models.MessageRole;
+import com.chatbot.v1.Records.ChatRequest;
+import com.chatbot.v1.Records.ChatResponse;
 import com.chatbot.v1.Repository.ConverstaionRepository;
 import com.chatbot.v1.Repository.MessageRepository;
-import com.chatbot.v1.exception.ConversationIdNotFound;
-import com.chatbot.v1.records.ChatRequest;
-import com.chatbot.v1.records.ChatResponse;
 
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.SystemMessage;
@@ -42,19 +41,11 @@ public class ChatServiceImpl implements ChatService{
 
     public ChatServiceImpl(ConverstaionRepository converstaionRepository, 
                             MessageRepository messageRepository, 
-                            ContentRetriever contentRetriever){
-        this.ollama = OllamaChatModel.builder()
-                            .modelName("qwen2.5:0.5b") // Small model running on CPU
-                            .baseUrl("http://host.docker.internal:11434")
-                            .timeout(Duration.ofMinutes(3))
-                            .build();
-
-        this.ollamaStream = OllamaStreamingChatModel.builder()
-                            .modelName("qwen2.5:0.5b")
-                            .baseUrl("http://host.docker.internal:11434")
-                            .timeout(Duration.ofMinutes(3))
-                            .build();
-
+                            ContentRetriever contentRetriever, 
+                            OllamaChatModel ollama,
+                            OllamaStreamingChatModel ollamaStream){
+        this.ollama = ollama;
+        this.ollamaStream = ollamaStream;
         this.conversationRepository = converstaionRepository;
         this.messageRepository = messageRepository;
         this.contentRetriever = contentRetriever;

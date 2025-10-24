@@ -1,4 +1,4 @@
-package com.chatbot.v1.exception;
+package com.chatbot.v1.Exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

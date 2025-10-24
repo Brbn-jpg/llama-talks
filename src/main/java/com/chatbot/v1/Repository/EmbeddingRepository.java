@@ -18,12 +18,4 @@ public interface EmbeddingRepository extends JpaRepository<Embedding, UUID> {
         WHERE metadata->>'fileName' IS NOT NULL
         """, nativeQuery = true)
     List<Object[]> findAllFileNames();
-
-    @Query(value = """
-        SELECT EXISTS(
-            SELECT 1 FROM embeddings 
-            WHERE metadata->>'fileName' = :fileName
-        )
-        """, nativeQuery = true)
-    boolean existsByFileName(String fileName);
 }

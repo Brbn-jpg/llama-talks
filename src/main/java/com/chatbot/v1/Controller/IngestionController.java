@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.chatbot.v1.Records.FileNameDTO;
 import com.chatbot.v1.Service.IngestionServiceImpl;
-import com.chatbot.v1.records.FileNameDTO;
 
 @RestController
 @RequestMapping("/ingestion")

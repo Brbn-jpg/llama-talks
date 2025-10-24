@@ -1,4 +1,4 @@
-package com.chatbot.v1.exception;
+package com.chatbot.v1.Exception;
 
 import java.util.Date;
 

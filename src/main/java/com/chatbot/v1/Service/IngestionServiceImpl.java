@@ -12,8 +12,8 @@ import java.util.stream.Collectors;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import com.chatbot.v1.Records.FileNameDTO;
 import com.chatbot.v1.Repository.EmbeddingRepository;
-import com.chatbot.v1.records.FileNameDTO;
 
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentSplitter;

@@ -23,18 +23,18 @@ LlamaTalks is a Spring Boot-based chatbot application leveraging LangChain4j and
 
 ```
 +-------------------+     +-------------------+     +-------------------+
-|  Frontend/App     | <-> |   OllamaChat API  | <-> |   Ollama Server   |
+|   Frontend/App    | <-> |   OllamaChat API  | <-> |   Ollama Server   |
 +-------------------+     +-------------------+     +-------------------+
                                     |
                                     v
                           +-------------------+
-                          |  Vector Store     |
-                          |  (Embeddings)     |
+                          |    Vector Store   |
+                          |    (Embeddings)   |
                           +-------------------+
                                     |
                                     v
                           +-------------------+
-                          |  PostgreSQL DB    |
+                          |   PostgreSQL DB   |
                           +-------------------+
 ```
 
@@ -141,7 +141,7 @@ ApacheTikaDocumentParser can automatically detect and parse over 1,400 different
 
 ### If you are running nvidia gpu
 
-Don't download Ollama locally. Instead uncomment everything in `docker-compose.yml` and change every `http://host.docker.internal:11434` to `http://ollama:11434` - this way you can skip step 2.
+Don't download Ollama locally. Instead uncomment everything in `docker-compose.yml` and change env file OLLAMA_URL from `http://host.docker.internal:11434` to `http://ollama:11434` - this way you can skip step 2.
 
 #### 1. Create .env file
 
@@ -150,6 +150,7 @@ POSTGRES_DB="databaseName"
 POSTGRES_USER="databaseUser"
 POSTGRES_PASSWORD="databasePassword"
 DB_URL="jdbc:postgresql://database:5432/databaseName"
+OLLAMA_URL="http://host.docker.internal:11434"
 ```
 
 #### 2. Download ollama models
@@ -287,10 +288,6 @@ Process research papers, articles, and reports to answer domain-specific questio
 ### 5. Legal Document Analysis
 
 Upload contracts, regulations, and legal documents for contextual Q&A.
-
-### 6. Media Analysis
-
-Extract and analyze content from audio files, videos, and images for content-aware responses.
 
 ## Contributing
 

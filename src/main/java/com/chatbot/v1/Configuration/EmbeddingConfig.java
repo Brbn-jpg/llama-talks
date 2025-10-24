@@ -10,7 +10,9 @@ import org.springframework.context.annotation.Configuration;
 
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
+import dev.langchain4j.model.ollama.OllamaStreamingChatModel;
 import dev.langchain4j.rag.content.retriever.ContentRetriever;
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
 import dev.langchain4j.store.embedding.EmbeddingStore;
@@ -27,6 +29,9 @@ public class EmbeddingConfig {
 
     @Value("${POSTGRES_PASSWORD}")
     private String password;
+
+    @Value("${OLLAMA_URL}")
+    private String ollamaUrl;
 
     @Bean
     public EmbeddingStore<TextSegment> embeddingStore(DataSource dataSource){
@@ -46,7 +51,7 @@ public class EmbeddingConfig {
     @Bean
     public EmbeddingModel embeddingModel(){
         return OllamaEmbeddingModel.builder()
-                .baseUrl("http://host.docker.internal:11434")
+                .baseUrl(ollamaUrl)
                 .modelName("nomic-embed-text")
                 .timeout(Duration.ofMinutes(5))
                 .maxRetries(3)
@@ -61,6 +66,24 @@ public class EmbeddingConfig {
                                     .maxResults(3)
                                     .minScore(0.75)
                                     .build();
+    }
+
+    @Bean
+    public OllamaChatModel ollama(){
+        return OllamaChatModel.builder()
+                               .modelName("qwen2.5:0.5b") // Small model running on CPU
+                               .baseUrl(ollamaUrl)
+                               .timeout(Duration.ofMinutes(3))
+                               .build();
+    }
+
+    @Bean
+    public OllamaStreamingChatModel ollamaStream(){
+        return OllamaStreamingChatModel.builder()
+                            .modelName("qwen2.5:0.5b")
+                            .baseUrl(ollamaUrl)
+                            .timeout(Duration.ofMinutes(3))
+                            .build();
     }
 }
         

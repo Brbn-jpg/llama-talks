@@ -13,9 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.chatbot.v1.Models.Conversation;
+import com.chatbot.v1.Records.ChatRequest;
+import com.chatbot.v1.Records.ChatResponse;
 import com.chatbot.v1.Service.ChatServiceImpl;
-import com.chatbot.v1.records.ChatRequest;
-import com.chatbot.v1.records.ChatResponse;
 
 import reactor.core.publisher.Flux;
 
