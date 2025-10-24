@@ -23,7 +23,7 @@ LlamaTalks is a Spring Boot-based chatbot application leveraging LangChain4j and
 
 ```
 +-------------------+     +-------------------+     +-------------------+
-|  Frontend/App     | <---> |  OllamaChat API   | <---> |  Ollama Server    |
+|  Frontend/App     | <-> |   OllamaChat API  | <-> |   Ollama Server   |
 +-------------------+     +-------------------+     +-------------------+
                                     |
                                     v
