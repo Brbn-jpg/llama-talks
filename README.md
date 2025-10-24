@@ -247,15 +247,13 @@ docker compose up -d
 ```bash
 curl -X POST http://localhost:8080/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"message":"Hello"}'
+  -d '{"message":"Hello","conversationId":""}'
 ```
 
 ### Document Ingestion (cURL)
 
 ```bash
-curl -X POST http://localhost:8080/api/ingestion \
-  -F "file=@/path/to/document.pdf" \
-  -F "file=@/path/to/manual.docx"
+curl -X POST http://localhost:8080/api/ingestion?filePath=files/ \
 ```
 
 ### Stream Chat with RAG Context
@@ -263,7 +261,7 @@ curl -X POST http://localhost:8080/api/ingestion \
 ```bash
 curl -X POST http://localhost:8080/api/chat/stream \
   -H "Content-Type: application/json" \
-  -d '{"message":"What does the documentation say about installation?"}' \
+  -d '{"message":"What does the documentation say about installation?","conversationId":""}' \
   --no-buffer
 ```
 
