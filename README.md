@@ -1,6 +1,6 @@
-# v1
+# LlamaTalks
 
-v1 is a Spring Boot-based LlamaTalks application leveraging LangChain4j and Ollama for advanced conversational AI with Retrieval-Augmented Generation (RAG) capabilities. It supports streaming responses, conversation management, document ingestion, and persistent chat history.
+LlamaTalks is a Spring Boot-based chat application leveraging LangChain4j and Ollama for advanced conversational AI with Retrieval-Augmented Generation (RAG) capabilities. It supports streaming responses, conversation management, document ingestion, and persistent chat history.
 
 ## Features
 
