@@ -40,7 +40,7 @@ LlamaTalks is a Spring Boot-based chat application leveraging LangChain4j and Ol
 
 ## RAG (Retrieval-Augmented Generation)
 
-v1 implements RAG to enhance AI responses with contextual information from your documents:
+Llama-talks implements RAG to enhance AI responses with contextual information from your documents:
 
 ### How RAG Works
 
