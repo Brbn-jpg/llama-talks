@@ -313,7 +313,7 @@ ApacheTikaDocumentParser can automatically detect and parse over 1,400 different
 - Docker
 - Ollama
 
-### If you are running nvidia gpu
+### If you are running dedicated gpu
 
 Don't download Ollama locally. Instead uncomment everything in `docker-compose.yml` and change env file OLLAMA_URL from `http://host.docker.internal:11434` to `http://ollama:11434` - this way you can skip step 2.
 
@@ -488,7 +488,7 @@ Upload contracts, regulations, and legal documents for contextual Q&A.
 - **Ollama not running**: Ensure `ollama serve` is active.
 - **Model not found**: Run `ollama pull <model-name>` for your chosen chat and embedding models.
 - **Database errors**: Check DB configuration in `application.yml`.
-- **Timeouts**: Increase timeout in `ChatServiceImpl`.
+- **Timeouts**: Increase timeout in `LangchainConfig`.
 - **RAG not working**: Verify that documents are successfully ingested and embeddings are generated.
 - **Slow document processing**: Large documents may take time to chunk and embed; consider pagination for large files.
 - **Out of memory**: Adjust JVM heap size or reduce embedding batch size for large document sets. Consider using a smaller model.

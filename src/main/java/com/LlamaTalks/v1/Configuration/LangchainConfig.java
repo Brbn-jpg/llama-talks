@@ -19,7 +19,7 @@ import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.pgvector.PgVectorEmbeddingStore;
 
 @Configuration
-public class EmbeddingConfig {
+public class LangchainConfig {
 
     @Value("${POSTGRES_DB}")
     private String database;
