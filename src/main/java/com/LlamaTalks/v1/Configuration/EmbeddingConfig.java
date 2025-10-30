@@ -33,6 +33,15 @@ public class EmbeddingConfig {
     @Value("${OLLAMA_URL}")
     private String ollamaUrl;
 
+    @Value("${DIMENSIONS}")
+    private int dimension;
+
+    @Value("${EMBEDDING_MODEL}")
+    private String embeddingModel;
+
+    @Value("${CHAT_MODEL}")
+    private String chatModel;
+
     @Bean
     public EmbeddingStore<TextSegment> embeddingStore(DataSource dataSource){
         return PgVectorEmbeddingStore.builder()
@@ -42,7 +51,7 @@ public class EmbeddingConfig {
                 .user(user)
                 .password(password)
                 .table("embeddings")
-                .dimension(768)
+                .dimension(dimension)
                 .createTable(true)
                 .dropTableFirst(false)
                 .build();
@@ -52,7 +61,7 @@ public class EmbeddingConfig {
     public EmbeddingModel embeddingModel(){
         return OllamaEmbeddingModel.builder()
                 .baseUrl(ollamaUrl)
-                .modelName("nomic-embed-text")
+                .modelName(embeddingModel)
                 .timeout(Duration.ofMinutes(5))
                 .maxRetries(3)
                 .build();
@@ -71,7 +80,7 @@ public class EmbeddingConfig {
     @Bean
     public OllamaChatModel ollama(){
         return OllamaChatModel.builder()
-                               .modelName("qwen2.5:0.5b") // Small model running on CPU
+                               .modelName(chatModel)
                                .baseUrl(ollamaUrl)
                                .timeout(Duration.ofMinutes(3))
                                .build();
@@ -80,7 +89,7 @@ public class EmbeddingConfig {
     @Bean
     public OllamaStreamingChatModel ollamaStream(){
         return OllamaStreamingChatModel.builder()
-                            .modelName("qwen2.5:0.5b")
+                            .modelName(chatModel)
                             .baseUrl(ollamaUrl)
                             .timeout(Duration.ofMinutes(3))
                             .build();

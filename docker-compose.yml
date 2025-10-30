@@ -27,9 +27,8 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - pgdata:/var/lib/postgres/data
-    env_file:
-      - .env
+      - pgdata:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - chat_network
 
@@ -42,6 +41,10 @@ services:
       DB_URL: ${DB_URL}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      OLLAMA_URL: ${OLLAMA_URL}
+      DIMENSIONS: ${DIMENSIONS}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      CHAT_MODEL: ${CHAT_MODEL}
     env_file:
       - .env
     depends_on:
