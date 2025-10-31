@@ -1,4 +1,4 @@
-package com.LlamaTalks.v1.Models;
+package com.LlamaTalks.v1.models;
 
 import java.time.LocalDateTime;
 
@@ -42,4 +42,7 @@ public class Message {
 
     @Column(name = "generatedAt")
     private LocalDateTime generatedAt;
+
+    @Column(name = "contextFromDoc")
+    private String context;
 }

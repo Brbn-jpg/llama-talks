@@ -6,9 +6,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.LlamaTalks.v1.Records.FileNameDTO;
-import com.LlamaTalks.v1.Repository.EmbeddingRepository;
-import com.LlamaTalks.v1.Service.IngestionServiceImpl;
+import com.LlamaTalks.v1.records.FileNameDTO;
+import com.LlamaTalks.v1.repository.EmbeddingRepository;
+import com.LlamaTalks.v1.service.IngestionServiceImpl;
 
 import dev.langchain4j.data.document.DocumentSplitter;
 import dev.langchain4j.data.segment.TextSegment;
@@ -16,12 +16,14 @@ import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class YourServiceTest {
+class IngestionServiceTest {
 
     @Mock
     private DocumentSplitter splitter;
@@ -41,10 +43,16 @@ class YourServiceTest {
     @Test
     void ingestDirectory_shouldThrowExceptionForNonExistentDirectory() {
         String fakePath = "/writing/tests/isnt/enjoyable/";
-        
-        assertThrows(IllegalArgumentException.class, () -> {
-            service.ingestDirectory(fakePath);
+
+        CompletableFuture<String> future = service.ingestDirectory(fakePath);
+
+        CompletionException e = assertThrows(CompletionException.class, () -> {
+            future.join(); 
         });
+        
+        Throwable cause = e.getCause();
+        assertInstanceOf(IllegalArgumentException.class, cause);
+        assertEquals("Directory does not exist: " + fakePath, cause.getMessage());
     }
     
     @Test

@@ -1,20 +1,22 @@
-package com.LlamaTalks.v1.Service;
+package com.LlamaTalks.v1.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.LlamaTalks.v1.Exception.ConversationIdNotFound;
-import com.LlamaTalks.v1.Models.Conversation;
-import com.LlamaTalks.v1.Models.Message;
-import com.LlamaTalks.v1.Models.MessageRole;
-import com.LlamaTalks.v1.Records.ChatRequest;
-import com.LlamaTalks.v1.Records.ChatResponse;
-import com.LlamaTalks.v1.Repository.ConverstaionRepository;
-import com.LlamaTalks.v1.Repository.MessageRepository;
+import com.LlamaTalks.v1.exception.ConversationIdNotFound;
+import com.LlamaTalks.v1.models.Conversation;
+import com.LlamaTalks.v1.models.Message;
+import com.LlamaTalks.v1.models.MessageRole;
+import com.LlamaTalks.v1.records.ChatRequest;
+import com.LlamaTalks.v1.records.ChatResponse;
+import com.LlamaTalks.v1.repository.ConverstaionRepository;
+import com.LlamaTalks.v1.repository.MessageRepository;
 
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.SystemMessage;
@@ -38,12 +40,13 @@ public class ChatServiceImpl implements ChatService{
     private final ConverstaionRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final ContentRetriever contentRetriever;
+    private final Logger logger = LoggerFactory.getLogger(ChatServiceImpl.class);
 
     public ChatServiceImpl(ConverstaionRepository converstaionRepository, 
                             MessageRepository messageRepository, 
                             ContentRetriever contentRetriever, 
                             OllamaChatModel ollama,
-                            OllamaStreamingChatModel ollamaStream){
+                            OllamaStreamingChatModel ollamaStream ){
         this.ollama = ollama;
         this.ollamaStream = ollamaStream;
         this.conversationRepository = converstaionRepository;
@@ -54,6 +57,7 @@ public class ChatServiceImpl implements ChatService{
     @Override
     public ChatResponse chat(ChatRequest message){
         if(message == null || message.message() == null || message.message().isEmpty()){
+            this.logger.error("Recieved empty chat request");
             throw new IllegalArgumentException("Message cannot be empty");
         }
 
@@ -61,16 +65,20 @@ public class ChatServiceImpl implements ChatService{
         ChatMemory memory = prepareChatMemory(conversationId);
 
         // Docs retrieval
+        this.logger.info("Retrieving docs for conversation: {}", conversationId);
         List<Content> relevantContents = contentRetriever.retrieve(Query.from(message.message()));
         String context = relevantContents.stream()
                                         .map(content -> content.textSegment().text())
                                         .collect(Collectors.joining("\n\n"));
 
         if (!context.isEmpty()) {
+            this.logger.info("Found context, length: {} chars", context.length());
             SystemMessage systemMessage = SystemMessage.from(
                 "Use the following context to answer the user's question:\n\n" + context
             );
             memory.add(systemMessage);
+        } else {
+            this.logger.warn("context is empty, no docs found");
         }
 
         UserMessage userMessage = UserMessage.from(message.message());
@@ -78,10 +86,12 @@ public class ChatServiceImpl implements ChatService{
 
         saveUserMessage(conversationId, message.message());
 
-
+        this.logger.info("Sending request to Ollama");
         AiMessage response = this.ollama.chat(memory.messages()).aiMessage();
+        this.logger.info("Received response from Ollama, length: {} chars", response.text().length());
+        
         memory.add(response);
-        saveAiMessage(conversationId, response.text());
+        saveAiMessage(conversationId, response.text(), context);
         
         return new ChatResponse(response.text(), conversationId);
     }
@@ -89,6 +99,7 @@ public class ChatServiceImpl implements ChatService{
     @Override
     public Flux<ChatResponse> streamChat(ChatRequest message){
         if(message == null || message.message() == null || message.message().isEmpty()){
+            this.logger.error("Recieved empty chat request");
             throw new IllegalArgumentException("Message cannot be empty");
         }
 
@@ -97,6 +108,7 @@ public class ChatServiceImpl implements ChatService{
         ChatMemory memory = prepareChatMemory(conversationId);
 
         // Docs retrieval
+        this.logger.info("Retrieving docs for conversation: {}", conversationId);
         List<Content> relevantContents = contentRetriever.retrieve(Query.from(message.message()));
         String context = relevantContents.stream()
                                         .map(content -> content.textSegment().text())
@@ -107,6 +119,8 @@ public class ChatServiceImpl implements ChatService{
                 "Use the following context to answer the user's question:\n\n" + context
             );
             memory.add(systemMessage);
+        } else {
+            this.logger.warn("context is empty, no docs found");
         }
 
         UserMessage userMessage = UserMessage.from(message.message());
@@ -117,6 +131,7 @@ public class ChatServiceImpl implements ChatService{
         StringBuilder aiResponse = new StringBuilder();
 
         Flux<ChatResponse> flux = Flux.create(emitter -> {
+            this.logger.info("Sending request to Ollama and streaming the response");
             this.ollamaStream.chat(memory.messages(), new StreamingChatResponseHandler() {
                 
                 @Override
@@ -132,13 +147,13 @@ public class ChatServiceImpl implements ChatService{
 
                 @Override
                 public void onCompleteResponse(dev.langchain4j.model.chat.response.ChatResponse completeResponse) {
-                    saveAiMessage(conversationId, aiResponse.toString());
+                    saveAiMessage(conversationId, aiResponse.toString(), context);
                     emitter.complete();
                 }
                 
             });
         });
-
+        this.logger.info("Received response from Ollama");
         return flux;
     }
 
@@ -156,6 +171,7 @@ public class ChatServiceImpl implements ChatService{
             throw new ConversationIdNotFound("Conversation not found");
         }
 
+        this.logger.info("Getting conversation with id: {}", conversationId);
         return conversation;
     }
 
@@ -166,6 +182,8 @@ public class ChatServiceImpl implements ChatService{
         if(conversation == null){
             throw new ConversationIdNotFound("Conversation not found");
         }
+
+        this.logger.info("Deleting conversation with id: {}", conversationId);
         this.conversationRepository.delete(conversation);
     }
 
@@ -183,6 +201,7 @@ public class ChatServiceImpl implements ChatService{
             throw new IllegalArgumentException("Title too long");
         }
 
+        this.logger.info("Changing title of conversation with id: {}", conversationId);
         conversation.setTitle(title);
     }
 
@@ -193,14 +212,17 @@ public class ChatServiceImpl implements ChatService{
     @Transactional
     public String prepareConversation(ChatRequest message){
         String conversationId = message.conversationId();
-        
+        this.logger.info("Creating new conversation with id: {}", conversationId);
+
         if(conversationId == null || conversationId.isBlank()){
             conversationId = UUID.randomUUID().toString();
         } else {
             Conversation existing = this.conversationRepository.findByConversationId(conversationId);
             if (existing == null) {
+                this.logger.error("Conversation not found: {}", conversationId);
                 throw new ConversationIdNotFound("Conversation not found: " + conversationId);
             }
+            this.logger.debug("Using existing conversationId: {}", conversationId);
             return conversationId;
         }
 
@@ -211,6 +233,7 @@ public class ChatServiceImpl implements ChatService{
             conversation.setStartedAt(LocalDateTime.now());
             conversation.setTitle(message.message().length() > 64 ? message.message().substring(0, 63) : message.message());
             conversation = this.conversationRepository.save(conversation);
+            this.logger.info("Saved new conversation: {}", conversationId);
         }
 
         return conversationId;
@@ -219,11 +242,13 @@ public class ChatServiceImpl implements ChatService{
     @Transactional
     public void saveUserMessage(String conversationId, String message){
         if(message == null || message.isBlank()){
+            this.logger.error("Attempted to save empty user message");
             throw new IllegalArgumentException("Message cannot be empty");
         }
 
         Conversation conversation = this.conversationRepository.findByConversationId(conversationId);
         if(conversation == null){
+            this.logger.error("Conversation not found when saving user message");
             throw new ConversationIdNotFound("Conversation not found");
         } 
 
@@ -233,16 +258,19 @@ public class ChatServiceImpl implements ChatService{
         userMsg.setRole(MessageRole.USER);
         userMsg.setGeneratedAt(LocalDateTime.now());
         this.messageRepository.save(userMsg);
+        this.logger.info("Saved user message for conversation: {}", conversationId);
     }
 
     @Transactional
-    public void saveAiMessage(String conversationId, String content) {
+    public void saveAiMessage(String conversationId, String content, String context) {
         if(content == null || content.isBlank()){
+            this.logger.error("Attempted to save empty ai message");
             throw new IllegalArgumentException("AI response cannot be empty");
         }
 
         Conversation conversation = conversationRepository.findByConversationId(conversationId);
         if(conversation == null){
+            this.logger.error("Conversation not found when saving ai message");
             throw new ConversationIdNotFound("Conversation not found");
         } 
 
@@ -251,7 +279,11 @@ public class ChatServiceImpl implements ChatService{
         aiMsg.setContent(content);
         aiMsg.setRole(MessageRole.AI);
         aiMsg.setGeneratedAt(LocalDateTime.now());
+        aiMsg.setContext(context != null && context.length() > 255 
+                                                    ? context.substring(0, 255) 
+                                                    : (context != null ? context : "No context"));
         messageRepository.save(aiMsg);
+        this.logger.info("Saved ai message for conversation: {}", conversationId);
     }
 
     private ChatMemory prepareChatMemory(String conversationId){

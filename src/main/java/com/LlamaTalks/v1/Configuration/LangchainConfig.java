@@ -1,4 +1,4 @@
-package com.LlamaTalks.v1.Configuration;
+package com.LlamaTalks.v1.configuration;
 
 import java.time.Duration;
 

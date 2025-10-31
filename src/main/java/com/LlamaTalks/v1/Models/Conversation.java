@@ -1,4 +1,4 @@
-package com.LlamaTalks.v1.Models;
+package com.LlamaTalks.v1.models;
 
 import java.time.LocalDateTime;
 import java.util.List;

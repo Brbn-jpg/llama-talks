@@ -1,4 +1,4 @@
-package com.LlamaTalks.v1.Service;
+package com.LlamaTalks.v1.service;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -9,11 +9,12 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import org.springframework.scheduling.annotation.Async;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.LlamaTalks.v1.Records.FileNameDTO;
-import com.LlamaTalks.v1.Repository.EmbeddingRepository;
+import com.LlamaTalks.v1.records.FileNameDTO;
+import com.LlamaTalks.v1.repository.EmbeddingRepository;
 
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentSplitter;
@@ -32,6 +33,8 @@ public class IngestionServiceImpl implements IngestionService{
     private final EmbeddingModel embeddingModel;
     private final EmbeddingStore<TextSegment> embeddingStore;
     private final EmbeddingRepository embeddingRepository;
+    private final Logger logger = LoggerFactory.getLogger(IngestionServiceImpl.class);
+
 
     public IngestionServiceImpl(EmbeddingModel embeddingModel, EmbeddingStore<TextSegment> embeddingStore, EmbeddingRepository embeddingRepository){
         this.splitter = DocumentSplitters.recursive(2000, 50);
@@ -40,58 +43,64 @@ public class IngestionServiceImpl implements IngestionService{
         this.embeddingRepository = embeddingRepository;
     }
 
-    @Async
     @Override
     @Transactional
     public CompletableFuture<String> ingestDirectory(String dirPath) {
-        String batchId = UUID.randomUUID().toString();
-
-        Path path = Paths.get(dirPath);
-        if (!Files.exists(path) || !Files.isDirectory(path)) {
-            throw new IllegalArgumentException("Directory does not exist: " + dirPath);
-        }
+        return CompletableFuture.supplyAsync(() -> {
+            String batchId = UUID.randomUUID().toString();
+            
+            this.logger.info("Scanning directory: {}", dirPath);
+            Path path = Paths.get(dirPath);
+            if (!Files.exists(path) || !Files.isDirectory(path)) {
+                this.logger.error("Directory does not exist: {}", dirPath);
+                throw new IllegalArgumentException("Directory does not exist: " + dirPath);
+            }
         
-        ApacheTikaDocumentParser parser = new ApacheTikaDocumentParser();
-        List<Document> documents;
-        try {
-            documents = FileSystemDocumentLoader.loadDocumentsRecursively(dirPath, parser);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to load documents from: " + dirPath, e);
-        }
+            ApacheTikaDocumentParser parser = new ApacheTikaDocumentParser();
+            List<Document> documents;
+            try {
+                documents = FileSystemDocumentLoader.loadDocumentsRecursively(dirPath, parser);
+            } catch (Exception e) {
+                this.logger.error("Failed to load documents from: {}", dirPath);
+                throw new RuntimeException("Failed to load documents from: " + dirPath, e);
+            }
 
-        if (documents == null || documents.isEmpty()) {
-            throw new IllegalStateException("No PDF files found in directory: " + dirPath);
-        }
+            if (documents == null || documents.isEmpty()) {
+                this.logger.error("No files found in directory: {}", dirPath);
+                throw new IllegalStateException("No files found in directory: " + dirPath);
+            }
 
-        Set<String> existingFiles = getAllFileNames().stream()
+            Set<String> existingFiles = getAllFileNames().stream()
                                                     .map(FileNameDTO::fileName)
                                                     .collect(Collectors.toSet());
 
-        for (Document document : documents) {
-            String fileName = document.metadata().getString("file_name");
-        
-            if (existingFiles.contains(fileName)) {
-                System.out.println("Skipping already ingested file: " + fileName);
-                continue;
-            }
+            for (Document document : documents) {
+                String fileName = document.metadata().getString("file_name");
+                this.logger.info("Ingesting document: {}", fileName);
 
-            List<TextSegment> segments = splitter.split(document);
-            System.out.println("Splitting doc: "+document.text());
-            List<Embedding> embeddings = embeddingModel.embedAll(segments).content();
+                if (existingFiles.contains(fileName)) {
+                    this.logger.info("Skipping already ingested file: {}", fileName);
+                    continue;
+                }
+
+                List<TextSegment> segments = splitter.split(document);
+                List<Embedding> embeddings = embeddingModel.embedAll(segments).content();
+                this.logger.info("Embedded segments: {}", embeddings.size());
             
-            for (int i = 0; i < segments.size(); i++) {
-                segments.get(i).metadata()
-                    .put("batchId", batchId)
-                    .put("fileName", document.metadata().getString("file_name"))
-                    .put("chunkIndex", i);
+                for (int i = 0; i < segments.size(); i++) {
+                    segments.get(i).metadata()
+                        .put("batchId", batchId)
+                        .put("fileName", document.metadata().getString("file_name"))
+                        .put("chunkIndex", i);
                 
-                embeddingStore.add(embeddings.get(i), segments.get(i));
-            }
+                    embeddingStore.add(embeddings.get(i), segments.get(i));
+                }
 
-            existingFiles.add(fileName);
-        }
-        
-        return CompletableFuture.completedFuture(batchId);
+                existingFiles.add(fileName);
+                this.logger.info("Added {} to existing files", fileName);
+            }
+        return batchId;  
+        });
     }
 
     @Override

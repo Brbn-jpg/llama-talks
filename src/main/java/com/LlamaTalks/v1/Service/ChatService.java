@@ -1,10 +1,10 @@
-package com.LlamaTalks.v1.Service;
+package com.LlamaTalks.v1.service;
 
 import java.util.List;
 
-import com.LlamaTalks.v1.Models.Conversation;
-import com.LlamaTalks.v1.Records.ChatRequest;
-import com.LlamaTalks.v1.Records.ChatResponse;
+import com.LlamaTalks.v1.models.Conversation;
+import com.LlamaTalks.v1.records.ChatRequest;
+import com.LlamaTalks.v1.records.ChatResponse;
 
 import reactor.core.publisher.Flux;
 

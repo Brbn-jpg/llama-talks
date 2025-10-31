@@ -1,4 +1,4 @@
-package com.LlamaTalks.v1.Exception;
+package com.LlamaTalks.v1.exception;
 
 public class ConversationIdNotFound extends RuntimeException{
     public ConversationIdNotFound(String message){

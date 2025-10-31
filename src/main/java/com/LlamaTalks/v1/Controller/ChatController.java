@@ -1,4 +1,4 @@
-package com.LlamaTalks.v1.Controller;
+package com.LlamaTalks.v1.controller;
 
 import java.util.List;
 
@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.LlamaTalks.v1.Models.Conversation;
-import com.LlamaTalks.v1.Records.ChatRequest;
-import com.LlamaTalks.v1.Records.ChatResponse;
-import com.LlamaTalks.v1.Service.ChatServiceImpl;
+import com.LlamaTalks.v1.models.Conversation;
+import com.LlamaTalks.v1.records.ChatRequest;
+import com.LlamaTalks.v1.records.ChatResponse;
+import com.LlamaTalks.v1.service.ChatServiceImpl;
 
 import reactor.core.publisher.Flux;
 

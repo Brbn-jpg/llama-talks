@@ -1,4 +1,4 @@
-package com.LlamaTalks.v1.Records;
+package com.LlamaTalks.v1.records;
 
 import java.util.UUID;
 

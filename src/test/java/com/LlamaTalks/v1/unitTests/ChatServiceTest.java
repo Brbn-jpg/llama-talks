@@ -22,14 +22,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.LlamaTalks.v1.Exception.ConversationIdNotFound;
-import com.LlamaTalks.v1.Models.Conversation;
-import com.LlamaTalks.v1.Models.MessageRole;
-import com.LlamaTalks.v1.Records.ChatRequest;
-import com.LlamaTalks.v1.Records.ChatResponse;
-import com.LlamaTalks.v1.Repository.ConverstaionRepository;
-import com.LlamaTalks.v1.Repository.MessageRepository;
-import com.LlamaTalks.v1.Service.ChatServiceImpl;
+import com.LlamaTalks.v1.exception.ConversationIdNotFound;
+import com.LlamaTalks.v1.models.Conversation;
+import com.LlamaTalks.v1.models.MessageRole;
+import com.LlamaTalks.v1.records.ChatRequest;
+import com.LlamaTalks.v1.records.ChatResponse;
+import com.LlamaTalks.v1.repository.ConverstaionRepository;
+import com.LlamaTalks.v1.repository.MessageRepository;
+import com.LlamaTalks.v1.service.ChatServiceImpl;
 
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.ollama.OllamaChatModel;
